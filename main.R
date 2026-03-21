@@ -2,18 +2,18 @@ library(tidyverse)
 
 # Wczytanie danych
 
-HSI <- read.csv("data/HSI.csv") 
-N225 <-read.csv("data/N225.csv")
+RUT <- read.csv("data/RUT.csv") 
+IXIC <-read.csv("data/IXIC.csv")
 
 # Daty występujące w obu plikach
 
-HSI <- HSI[HSI$date %in% N225$date, ]
-N225 <- N225[N225$date %in% HSI$date, ]
+RUT <- RUT[RUT$date %in% IXIC$date, ]
+IXIC <- IXIC[IXIC$date %in% RUT$date, ]
 
 # Obliczenie dziennych stóp zwrotu
 
-HSI$return <- c(NA, diff(HSI$close) / HSI$close[-length(HSI$close)])
-N225$return <- c(NA, diff(N225$close) / N225$close[-length(N225$close)])
+RUT$return <- c(NA, diff(RUT$close) / RUT$close[-length(RUT$close)])
+IXIC$return <- c(NA, diff(IXIC$close) / IXIC$close[-length(IXIC$close)])
 
-HSI <- na.omit(HSI) %>% select(date, close, return)
-N225 <- na.omit(N225) %>% select(date, close, return)
+RUT <- na.omit(RUT) %>% select(date, close, return)
+IXIC <- na.omit(IXIC) %>% select(date, close, return)
