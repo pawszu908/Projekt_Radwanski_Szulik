@@ -1,4 +1,5 @@
 library(tidyverse)
+library(dplyr)
 
 # Wczytanie danych
 
@@ -15,5 +16,10 @@ IXIC <- IXIC[IXIC$date %in% RUT$date, ]
 RUT$return <- c(NA, diff(RUT$close) / RUT$close[-length(RUT$close)])
 IXIC$return <- c(NA, diff(IXIC$close) / IXIC$close[-length(IXIC$close)])
 
-RUT <- na.omit(RUT) %>% select(date, close, return)
-IXIC <- na.omit(IXIC) %>% select(date, close, return)
+RUT <- na.omit(RUT) %>% 
+  select(date, close, return) %>% 
+  filter(date >= "2008-01-01")
+IXIC <- na.omit(IXIC) %>% 
+  select(date, close, return) %>% 
+  filter(date >= "2008-01-01")
+
