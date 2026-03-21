@@ -1,0 +1,124 @@
+---
+title: "Analiza statystyczna współzależności indeksów RUT i IXIC"
+author: "Marcel Radwański, Paweł Szulik"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Opis projektu
+
+Celem projektu jest zbadanie statystycznych zależności pomiędzy dwoma kluczowymi indeksami amerykańskiego rynku kapitałowego: **Russell 2000 (RUT)** oraz **NASDAQ Composite (IXIC)**. Analiza wykorzystuje wartości indeksów od początku 2008 roku, dzięki czemu uwzględnienia zmiany wywołane m.in. przez kryzys finansowy w 2008.
+
+## Wykorzystane indeksy
+
+-   **Russell 2000 (RUT)**: Indeks reprezentujący 2000 spółek o małej kapitalizacji.Jest on uważany za barometr kondycji wewnętrznej gospodarki USA.
+-   **NASDAQ Composite (IXIC)**: Szeroki indeks obejmujący spółki notowane na giełdzie NASDAQ. Jest to indeks ważony kapitalizacją rynkową: większe firmy mają większy wpływ na jego wartość.
+
+## Przygotowanie danych
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(dplyr)
+
+# Wczytanie danych
+
+RUT <- read.csv("data/RUT.csv") 
+IXIC <-read.csv("data/IXIC.csv")
+
+# Wybranie dat występujących w obu zbiorach
+
+RUT <- RUT[RUT$date %in% IXIC$date, ]
+IXIC <- IXIC[IXIC$date %in% RUT$date, ]
+
+# Obliczenie dziennych stóp zwrotu
+
+RUT$return <- c(NA, diff(RUT$close) / RUT$close[-length(RUT$close)])
+IXIC$return <- c(NA, diff(IXIC$close) / IXIC$close[-length(IXIC$close)])
+
+# Czyszczenie danych
+RUT <- RUT %>% 
+  select(date, close, return) %>% 
+  filter(date >= "2008-01-01")
+IXIC <- IXIC %>% 
+  select(date, close, return) %>% 
+  filter(date >= "2008-01-01")
+```
+
+# Testy permutacyjne
+
+```{r}
+n <- 5000
+```
+
+## Istotność kowariancji
+
+Test sprawdza, czy zaobserwowana kowariancja między indeksami jest wynikiem rzeczywistego powiązania, czy dziełem przypadku.
+
+H~0~: Zmienne są niezależne.
+
+```{r}
+
+cov_ret <- cov(RUT$return, IXIC$return) # Faktyczna kowariancja z danych historycznych
+cov_perm <- replicate(n, cov(RUT$return, sample(IXIC$return))) # Losowe mieszanie zwrotów z indeksu IXIC
+p_val_cov <- sum(abs(cov_perm) >= abs(cov_ret)) / n # Obliczamy p-value (test dwustronny): ile razy losowa kowariancja była silniejsza niż realna
+
+cat("Zaobserwowana kowariancja:", cov_ret)
+cat("\nP-value:", p_val_cov)
+
+```
+
+Wniosek: Odrzucamy H~0~ - zależność indeksów RUT i IXIC jest statystycznie istotna. 
+
+## Test równości wariancji i wartości oczekiwanych
+
+```{r}
+pool <- c(RUT$return, IXIC$return) # Łączymy stopy zwrotu obu indeksów w jedną pulę danych
+n_rut <- length(RUT$return) 
+n_total <- length(pool)
+```
+
+### Test równości wariancji
+
+Test sprawdza, czy dane są równo rozproszone wokół średniej w obu zbiorach.
+
+```{r}
+v_rut <- var(RUT$return)
+v_ixic <- var(IXIC$return)
+obs_var_ratio <- max(v_rut, v_ixic) / min(v_rut, v_ixic) # Wyznaczamy faktyczny stosunek wariancji (większa do mniejszej)
+
+var_ratios_perm <- replicate(n, {
+  shuffled <- sample(pool) # Mieszamy wszystkie obserwacje z połączonej puli danych
+  v1 <- var(shuffled[1:n_rut]) # Obliczamy wariancję dla pierwszej losowo wybranej grupy
+  v2 <- var(shuffled[(n_rut + 1):n_total]) # Obliczamy wariancję dla pozostałych danych
+  max(v1, v2) / min(v1, v2) # Obliczamy stosunek wariancji konkretnego losowania
+})
+
+p_val_var <- sum(var_ratios_perm >= obs_var_ratio) / n # p-value = odsetek losowych stosunków większych od zaobserwowanego
+
+cat("\nZaobserwowany stosunek wariancji:", obs_var_ratio)
+cat("\nP-value:", p_val_var)
+```
+
+Wniosek: Odrzucamy H~0~ - indeksy różnią się istotnie wariancją.
+
+###  Test równości wartości oczekiwanych
+
+Test sprawdza, czy średnie stopy zwrotu są statystycznie takie same.
+
+```{r}
+obs_mean_diff <- abs(mean(RUT$return) - mean(IXIC$return))
+
+mean_diffs_perm <- replicate(n, {
+  shuffled <- sample(pool) # Mieszamy wszystkie obserwacje z połączonej puli danych
+  m1 <- mean(shuffled[1:n_rut]) # Obliczamy średnią dla pierwszej losowej grupy
+  m2 <- mean(shuffled[(n_rut + 1):n_total]) # Obliczamy średnią dla drugiej losowej grupy
+  abs(m1 - m2) # Obliczamy bezwzględną różnicę średnich dla tego losowania
+})
+
+p_val_mean <- sum(mean_diffs_perm >= obs_mean_diff) / n # p-value = odsetek losowych różnic większych od zaobserwowanej
+
+cat("\nZaobserwowana różnica średnich:", obs_mean_diff)
+cat("\nP-value:", p_val_mean, "\n")
+```
+
+Wniosek: Brak podstaw do odrzucenia H~0~ - średnie zyski są zbliżone.
