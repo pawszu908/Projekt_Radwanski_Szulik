@@ -122,3 +122,70 @@ cat("\nP-value:", p_val_mean, "\n")
 ```
 
 Wniosek: Brak podstaw do odrzucenia H~0~ - średnie zyski są zbliżone.
+
+# Symulacja strategii inwestycyjnej
+```{r}
+n <- nrow(RUT)
+dni_trzymanie <- 100
+liczba_akcji <- 100
+
+zysk_portfel <- numeric(n - dni_trzymanie)
+
+for (i in 1:(n - dni_trzymanie)){
+  zysk_RUT <- (RUT$close[i + dni_trzymanie] - RUT$close[i]) * liczba_akcji
+  
+  zysk_IXIC <- (IXIC$close[i + dni_trzymanie] - IXIC$close[i]) * liczba_akcji
+  
+  zysk_portfel[i] <- zysk_RUT + zysk_IXIC
+}
+```
+
+Dla naszej potencjalnej strategii inwestycyjnej zakładamy, że każdego dnia kupujemy po 100 akcji danego indeksu, które sprzedajemy 100 dni od zakupu. Przygotowujemy pusty wektor, który będzie przechowywał zysk z każdego dnia. Jest on krótszy o 100 wartości niż liczba obserwacji, ponieważ nie znamy cen sprzedaży dla ostatnich 100 zakupów. Przeprowadzamy symulację, gdzie dla każdego indeksu **zysk = (cena sprzedaży - cena zakupu) * liczba akcji**, a zysk portfela to sumaryczny zysk z obu instrumentów.
+
+## Histogram zysku portfela
+```{r}
+hist(zysk_portfel / 1000, breaks = 30, col = 'lightblue', 
+     main = "Histogram zysku z portfela",
+     xlab = "Zysk [w tyś. USD]",
+     )
+```
+
+Tworzymy wykres, który pokazuje rozkład dziennych zysków z inwestycji.
+
+## Test normalności
+```{r}
+shapiro.test(zysk_portfel)
+
+cat("p-value < 2.2e-16")
+
+cat("WNIOSEK: ROZKŁAD ZYSKU Z PORTFELA NIE JEST OPISANY ROZKŁADEM NORMALNYM")
+```
+
+Przeprowadam test Shapiro-Wilka, aby sprawdzić, czy rozkład zysku jest rozkładem normalnym. P-value jest znacząco mniejsze od 0.05 => Zysk nie ma rozkładu normalnego.
+
+## Value at Risk (VaR)
+```{r}
+# historyczny
+poziomy_istotnosci <- c(0.05, 0.01, 0.001)
+var_historyczny <- quantile(zysk_portfel, poziomy_istotnosci)
+
+# normalny (parametryczny)
+srednia_portfel <- mean(zysk_portfel)
+sd_portfel<-sd(zysk_portfel)
+var_norm <- qnorm(poziomy_istotnosci, srednia_portfel, sd_portfel)
+
+# porownanie VaR
+var_porownanie <- data.frame(
+  Historyczny = var_historyczny,
+  Normalny = var_norm
+)
+
+print(var_porownanie)
+
+cat("Przy poziomie istotności 5%, VaR historyczny jest większy niż normalny,
+    jednakże przy 1% i 0.1% VaR historyczny już jest znacznie niższy od normalnego, 
+    co pokazuje, że traciliśmy więcej niż zakładał rozkład normalny. ")
+```
+
+Obliczam Value at Risk czyli maksymalną wartość zysku, którą mogę stracić, przy danym prawdopodobieństwie. Na początku używam do tego danych historycznych, za poziomy istotności przyjmuję **5%, 1% i 0.1%**. Następnie dla tych samych poziomów istotności obliczam VaR normalny, czyli sprawdzam, co by się stało, gdyby traktować mój rozkład, jako rozkład normalny, z niezmienionymi wartościami średniej i wartości oczekiwanej. Ostatecznie porównuję wyniki. Widzę, że przy prawdopodobieństwie na poziomie **5%** potencjalnie mógłbym więcej stracić, gdyby zysk miał rozkład normalny. Jednakże, gdy spojrzymy na wartości przy poziomach istotności **1%** i **0.1%**, widzimy, że straty w rozkładzie historycznym, są już znacznie większe, niż przy potencjalnym rozkładzie normalnym. Są to wartości ryzyka dla zdarzeń, bardzo mało prawdopodobnych, ale możliwych.  
+

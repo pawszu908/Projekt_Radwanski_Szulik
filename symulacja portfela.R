@@ -19,7 +19,7 @@ hist(zysk_portfel / 1000, breaks = 30, col = 'lightblue',
      xlab = "Zysk [w tyś. USD]",
      )
 
-# test normalności
+# --- test normalności ---
 shapiro.test(zysk_portfel)
 
 cat("p-value < 2.2e-16")
