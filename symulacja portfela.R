@@ -1,14 +1,14 @@
 # --- symulacja strategii inwestycyjnej ---
 n <- nrow(RUT)
-dni_trzymanie <- 100
+dni_trzymania <- 100
 liczba_akcji <- 100
 
-zysk_portfel <- numeric(n - dni_trzymanie)
+zysk_portfel <- numeric(n - dni_trzymania)
 
-for (i in 1:(n - dni_trzymanie)){
-  zysk_RUT <- (RUT$close[i + dni_trzymanie] - RUT$close[i]) * liczba_akcji
+for (i in 1:(n - dni_trzymania)){
+  zysk_RUT <- (RUT$close[i + dni_trzymania] - RUT$close[i]) * liczba_akcji
   
-  zysk_IXIC <- (IXIC$close[i + dni_trzymanie] - IXIC$close[i]) * liczba_akcji
+  zysk_IXIC <- (IXIC$close[i + dni_trzymania] - IXIC$close[i]) * liczba_akcji
   
   zysk_portfel[i] <- zysk_RUT + zysk_IXIC
 }

@@ -35,7 +35,7 @@ IXIC <- IXIC[IXIC$date %in% RUT$date, ]
 RUT$return <- c(NA, diff(RUT$close) / RUT$close[-length(RUT$close)])
 IXIC$return <- c(NA, diff(IXIC$close) / IXIC$close[-length(IXIC$close)])
 
-# Czyszczenie danych
+# Filtrowanie danych
 RUT <- RUT %>% 
   select(date, close, return) %>% 
   filter(date >= "2008-01-01")
@@ -138,16 +138,18 @@ for (i in 1:(n - dni_trzymanie)){
   
   zysk_portfel[i] <- zysk_RUT + zysk_IXIC
 }
+
 ```
 
 Dla naszej potencjalnej strategii inwestycyjnej zakładamy, że każdego dnia kupujemy po 100 akcji danego indeksu, które sprzedajemy 100 dni od zakupu. Przygotowujemy pusty wektor, który będzie przechowywał zysk z każdego dnia. Jest on krótszy o 100 wartości niż liczba obserwacji, ponieważ nie znamy cen sprzedaży dla ostatnich 100 zakupów. Przeprowadzamy symulację, gdzie dla każdego indeksu **zysk = (cena sprzedaży - cena zakupu) * liczba akcji**, a zysk portfela to sumaryczny zysk z obu instrumentów.
 
 ## Histogram zysku portfela
 ```{r}
-hist(zysk_portfel / 1000, breaks = 30, col = 'lightblue', 
+hist(zysk_portfel / 1000, breaks = 50, col = 'lightblue', 
      main = "Histogram zysku z portfela",
-     xlab = "Zysk [w tyś. USD]",
+     xlab = "Zysk [w tys. USD]"
      )
+
 ```
 
 Tworzymy wykres, który pokazuje rozkład dziennych zysków z inwestycji.
@@ -156,12 +158,12 @@ Tworzymy wykres, który pokazuje rozkład dziennych zysków z inwestycji.
 ```{r}
 shapiro.test(zysk_portfel)
 
-cat("p-value < 2.2e-16")
+cat("p-value < 2.2e-16", "\n")
 
 cat("WNIOSEK: ROZKŁAD ZYSKU Z PORTFELA NIE JEST OPISANY ROZKŁADEM NORMALNYM")
 ```
 
-Przeprowadam test Shapiro-Wilka, aby sprawdzić, czy rozkład zysku jest rozkładem normalnym. P-value jest znacząco mniejsze od 0.05 => Zysk nie ma rozkładu normalnego.
+Przeprowadam test Shapiro-Wilka, aby sprawdzić, czy rozkład zysku jest rozkładem normalnym. P-value jest znacząco mniejsze od np. 0.05 => Zysk nie ma rozkładu normalnego.
 
 ## Value at Risk (VaR)
 ```{r}
@@ -187,5 +189,5 @@ cat("Przy poziomie istotności 5%, VaR historyczny jest większy niż normalny,
     co pokazuje, że traciliśmy więcej niż zakładał rozkład normalny. ")
 ```
 
-Obliczam Value at Risk czyli maksymalną wartość zysku, którą mogę stracić, przy danym prawdopodobieństwie. Na początku używam do tego danych historycznych, za poziomy istotności przyjmuję **5%, 1% i 0.1%**. Następnie dla tych samych poziomów istotności obliczam VaR normalny, czyli sprawdzam, co by się stało, gdyby traktować mój rozkład, jako rozkład normalny, z niezmienionymi wartościami średniej i wartości oczekiwanej. Ostatecznie porównuję wyniki. Widzę, że przy prawdopodobieństwie na poziomie **5%** potencjalnie mógłbym więcej stracić, gdyby zysk miał rozkład normalny. Jednakże, gdy spojrzymy na wartości przy poziomach istotności **1%** i **0.1%**, widzimy, że straty w rozkładzie historycznym, są już znacznie większe, niż przy potencjalnym rozkładzie normalnym. Są to wartości ryzyka dla zdarzeń, bardzo mało prawdopodobnych, ale możliwych.  
+Obliczam Value at Risk dla zysku czyli maksymalną wartość zysku, którą mogę stracić, przy danym prawdopodobieństwie. Na początku używam do tego danych historycznych, za poziomy istotności przyjmuję **5%, 1% i 0.1%**. Następnie dla tych samych poziomów istotności obliczam VaR normalny, czyli sprawdzam, co by się stało, gdyby traktować mój rozkład, jako rozkład normalny, z niezmienionymi wartościami średniej i wartości oczekiwanej. Ostatecznie porównuję wyniki. Widzę, że przy prawdopodobieństwie na poziomie **5%** potencjalnie mógłbym więcej stracić, gdyby zysk miał rozkład normalny. Jednakże, gdy spojrzymy na wartości przy poziomach istotności **1%** i **0.1%**, widzimy, że straty w rozkładzie historycznym, są już znacznie większe, niż przy potencjalnym rozkładzie normalnym. Są to wartości ryzyka dla zdarzeń, bardzo mało prawdopodobnych, ale możliwych.
 
